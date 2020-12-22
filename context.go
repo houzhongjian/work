@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strconv"
 )
 
 type Context struct {
@@ -84,6 +85,24 @@ func (ctx *Context) Step(args ...HandlerFunc) {
 	}
 }
 
+//Done 方法 主要用来中断Step中的方法 不在往下执行.
 func (ctx *Context) Done(args ...HandlerFunc) {
 	ctx.next = false
+}
+
+func (ctx *Context) Write(b []byte) {
+	_, _ = ctx.ResponseWriter.Write(b)
+}
+
+func (ctx *Context) GetString(key string) string {
+	return ctx.Request.FormValue(key)
+}
+
+func (ctx *Context) GetInt(key string) int {
+	n, err := strconv.Atoi(ctx.Request.FormValue(key))
+	if err != nil {
+		return 0
+	}
+
+	return n
 }
