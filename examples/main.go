@@ -8,8 +8,10 @@ import (
 
 func main() {
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-	e := work.New()
-	e.Method("/", service.HandleDefault)
-	e.Method("/login", service.HandleLogin)
-	panic(e.Run(":9099"))
+
+	web := work.New()
+	web.Any("/", &service.DefaultRequest{})
+	web.Post("/api/login", &service.LoginRequest{})
+
+	panic(web.Run(":8100"))
 }

@@ -2,24 +2,24 @@ package service
 
 import (
 	"github.com/houzhongjian/work"
-	"log"
+	"github.com/houzhongjian/work/examples/basic"
 )
 
-type DefaultRequest struct {}
-
-func HandleDefault(ctx *work.Context)  {
-	srv := new(DefaultRequest)
-	ctx.Step(srv.Before, srv.Logic, srv.After)
+type DefaultRequest struct {
+	basic.PageParams
 }
 
 func (request *DefaultRequest) Before(ctx *work.Context) {
-	log.Printf("Before request:%+v\n", request)
+	request.LoadPageParams(ctx)
 }
 
 func (request *DefaultRequest) After(ctx *work.Context) {
-	log.Printf("After request:%+v\n", request)
 }
 
 func (request *DefaultRequest) Logic(ctx *work.Context) {
-	ctx.ResponseWriter.Write([]byte("<h1>hello world</h1>"))
+	ctx.ServeJSON(work.H{
+		"page":     request.Page,
+		"pagesize": request.Pagesize,
+		"offset":   request.Offset,
+	})
 }

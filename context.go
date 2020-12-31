@@ -3,6 +3,7 @@ package work
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -11,42 +12,40 @@ import (
 type Context struct {
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
-	next           bool
+	next           bool //next用来中断调用链.
+	Body           io.ReadCloser
+	contextData    map[string]interface{}
+	httpStatus     int
+	RequestURI     string
+	RemoteAddr     string
+	Method         string
+	Header         http.Header
+	Host           string
 }
 
-//WriteResponse 返回自定义消息.
-func (ctx *Context) WriteResponse(code int, msg interface{}) {
-	data := map[string]interface{}{
-		"code": code,
-		"msg":  msg,
-	}
-
-	content, err := json.Marshal(data)
+func (ctx *Context) ServeJSON(h H) {
+	b, err := json.Marshal(h)
 	if err != nil {
 		return
 	}
 
-	_, _ = ctx.ResponseWriter.Write(content)
+	ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
+	ctx.Write(b)
 }
 
-//WriteFail 用来返回失败消息 并且阻止执行下一个步骤方法.
-func (ctx *Context) WriteFail(msg interface{}) {
-	ctx.Done()
-	ctx.WriteResponse(1001, msg)
+func (ctx *Context) ServeData(h H) {
 }
 
-//WriteWarning 用来返回失败消息.
-func (ctx *Context) WriteWarning(msg interface{}) {
-	ctx.WriteResponse(1001, msg)
+func (ctx *Context) ServeString(s string) {
+	ctx.Write([]byte(s))
 }
 
-//返回成功消息.
-func (ctx *Context) WriteSuccess(msg interface{}) {
-	ctx.WriteResponse(1000, msg)
+func (ctx *Context) WriteHeader(statusCode int) {
+	ctx.ResponseWriter.WriteHeader(statusCode)
 }
 
 func (ctx *Context) BindJSON(obj interface{}) error {
-	if err := json.NewDecoder(ctx.Request.Body).Decode(&obj); err != nil {
+	if err := json.NewDecoder(ctx.Request.Body).Decode(obj); err != nil {
 		return err
 	}
 	return nil
@@ -54,11 +53,10 @@ func (ctx *Context) BindJSON(obj interface{}) error {
 
 //BindJSONAndValidator 绑定json 并且调用结构体的Validator.
 func (ctx *Context) BindJSONAndValidator(obj interface{}) error {
-	if err := json.NewDecoder(ctx.Request.Body).Decode(obj); err != nil {
-		return err
-	}
-
 	t := reflect.TypeOf(obj)
+	if t.Kind() != reflect.Ptr {
+		return errors.New(t.Name() + "必须为指针类型")
+	}
 	v := reflect.ValueOf(obj)
 
 	fn := "Validator"
@@ -66,6 +64,10 @@ func (ctx *Context) BindJSONAndValidator(obj interface{}) error {
 	if !ok {
 		//不存在.
 		return errors.New("Validator不存在")
+	}
+
+	if err := json.NewDecoder(ctx.Request.Body).Decode(obj); err != nil {
+		return err
 	}
 
 	validator := v.MethodByName(fn)
@@ -77,16 +79,8 @@ func (ctx *Context) BindJSONAndValidator(obj interface{}) error {
 	return nil
 }
 
-func (ctx *Context) Step(args ...HandlerFunc) {
-	for _, arg := range args {
-		if ctx.next { //判断是否运行执行下一步.
-			arg(ctx)
-		}
-	}
-}
-
 //Done 方法 主要用来中断Step中的方法 不在往下执行.
-func (ctx *Context) Done(args ...HandlerFunc) {
+func (ctx *Context) Done() {
 	ctx.next = false
 }
 
@@ -105,4 +99,11 @@ func (ctx *Context) GetInt(key string) int {
 	}
 
 	return n
+}
+
+func (ctx *Context) SetContext(key string, value interface{}) {
+	ctx.contextData[key] = value
+}
+func (ctx *Context) GetContext(key string) interface{} {
+	return ctx.contextData[key]
 }
