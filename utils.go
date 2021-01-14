@@ -1,3 +1,3 @@
 package work
 
-type H map[string]interface{}
+type Message map[string]interface{}

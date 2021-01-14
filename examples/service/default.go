@@ -10,16 +10,17 @@ type DefaultRequest struct {
 }
 
 func (request *DefaultRequest) Before(ctx *work.Context) {
-	request.LoadPageParams(ctx)
+	//request.LoadPageParams(ctx)
 }
 
 func (request *DefaultRequest) After(ctx *work.Context) {
 }
 
 func (request *DefaultRequest) Logic(ctx *work.Context) {
-	ctx.ServeJSON(work.H{
-		"page":     request.Page,
-		"pagesize": request.Pagesize,
-		"offset":   request.Offset,
+	ctx.Layout("view/layout.html")
+	ctx.ServeData(work.Message{
+		"Name":  "张三",
+		"Title": "work template",
 	})
+	ctx.View("view/index.html")
 }

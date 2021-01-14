@@ -21,19 +21,20 @@ type Context struct {
 	Method         string
 	Header         http.Header
 	Host           string
+
+	layout   string
+	view     string
+	viewData Message
 }
 
-func (ctx *Context) ServeJSON(h H) {
-	b, err := json.Marshal(h)
+func (ctx *Context) ServeJSON(m Message) {
+	b, err := json.Marshal(m)
 	if err != nil {
 		return
 	}
 
 	ctx.ResponseWriter.Header().Set("Content-Type", "application/json")
 	ctx.Write(b)
-}
-
-func (ctx *Context) ServeData(h H) {
 }
 
 func (ctx *Context) ServeString(s string) {
@@ -106,4 +107,12 @@ func (ctx *Context) SetContext(key string, value interface{}) {
 }
 func (ctx *Context) GetContext(key string) interface{} {
 	return ctx.contextData[key]
+}
+
+func (ctx *Context) Step(handler ...HandlerFunc) {
+	for _, f := range handler {
+		if ctx.next {
+			f(ctx)
+		}
+	}
 }

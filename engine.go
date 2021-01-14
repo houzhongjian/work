@@ -8,12 +8,18 @@ import (
 )
 
 type Engine struct {
-	router map[string]interface{}
+	router   map[string]Route
+	notfound interface{}
 }
 
-func New() *Engine {
+func New(m ...HandlerFunc) *Engine {
 	return &Engine{
-		router: make(map[string]interface{}),
+		router: map[string]Route{
+			http.MethodGet:    getRouter,
+			http.MethodPut:    putRouter,
+			http.MethodPost:   postRouter,
+			http.MethodDelete: deleteRouter,
+		},
 	}
 }
 
@@ -22,13 +28,6 @@ func (engine *Engine) Run(addr string) error {
 }
 
 func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	urlPath := strings.Split(r.URL.String(), "?")
-	obj, ok := engine.router[urlPath[0]]
-	if !ok {
-		http.NotFound(w, r)
-		return
-	}
-
 	ctx := &Context{
 		ResponseWriter: w,
 		Request:        r,
@@ -40,6 +39,23 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Method:         r.Method,
 		Header:         r.Header,
 		Host:           r.Host,
+	}
+
+	urlPath := strings.Split(r.URL.String(), "?")
+
+	//判断method是否存在.
+	method, ok := engine.router[r.Method]
+	if !ok {
+		//todo 执行404
+		http.NotFound(w, r)
+		return
+	}
+
+	//判断路由是否存在.
+	obj, ok := method[urlPath[0]]
+	if !ok {
+		http.NotFound(w, r)
+		return
 	}
 
 	t := reflect.TypeOf(obj)

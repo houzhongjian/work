@@ -2,6 +2,7 @@ package basic
 
 import (
 	"github.com/houzhongjian/work"
+	"github.com/houzhongjian/work/examples/common"
 )
 
 type PageParams struct {
@@ -23,4 +24,9 @@ func (request *PageParams) LoadPageParams(ctx *work.Context) {
 	}
 
 	request.Offset = (request.Page - 1) * request.Pagesize
+}
+
+
+func Common(ctx *work.Context) {
+	ctx.Step(common.RecordLog, common.CheckLogin)
 }
