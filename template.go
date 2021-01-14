@@ -19,13 +19,6 @@ func (ctx *Context) ServeData(data Message) {
 func (ctx *Context) View(view string) {
 	ctx.view = view
 
-	//读取layout.
-	layoutByte, err := ioutil.ReadFile(ctx.layout)
-	if err != nil {
-		log.Printf("err:%+v\n", err)
-		return
-	}
-
 	//读取视图文件.
 	viewByte, err := ioutil.ReadFile(view)
 	if err != nil {
@@ -33,8 +26,19 @@ func (ctx *Context) View(view string) {
 		return
 	}
 
-	//替换{{.LayoutContent}}.
-	content := strings.ReplaceAll(string(layoutByte), "{{.LayoutContent}}", string(viewByte))
+	content := string(viewByte)
+
+	if ctx.layout != "" {
+		//读取layout.
+		layoutByte, err := ioutil.ReadFile(ctx.layout)
+		if err != nil {
+			log.Printf("err:%+v\n", err)
+			return
+		}
+
+		//替换{{.LayoutContent}}.
+		content = strings.ReplaceAll(string(layoutByte), "{{.LayoutContent}}", string(viewByte))
+	}
 
 	t := template.New("layout.html").Funcs(template.FuncMap{
 		"include": include,
