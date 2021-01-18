@@ -10,9 +10,10 @@ import (
 type Engine struct {
 	router   map[string]Route
 	notfound interface{}
+	filter []HandlerFunc
 }
 
-func New(m ...HandlerFunc) *Engine {
+func New() *Engine {
 	return &Engine{
 		router: map[string]Route{
 			http.MethodGet:    getRouter,
@@ -21,6 +22,10 @@ func New(m ...HandlerFunc) *Engine {
 			http.MethodDelete: deleteRouter,
 		},
 	}
+}
+
+func (engine *Engine) Filter(filter ...HandlerFunc) {
+	engine.filter = filter
 }
 
 func (engine *Engine) Run(addr string) error {
@@ -39,6 +44,16 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Method:         r.Method,
 		Header:         r.Header,
 		Host:           r.Host,
+	}
+
+	//执行过滤器.
+	for _, filter := range engine.filter {
+		if ctx.next {
+			filter(ctx)
+		}
+	}
+	if !ctx.next {
+		return
 	}
 
 	urlPath := strings.Split(r.URL.String(), "?")

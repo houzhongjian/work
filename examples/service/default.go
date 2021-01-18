@@ -17,7 +17,7 @@ func (request *DefaultRequest) After(ctx *work.Context) {
 }
 
 func (request *DefaultRequest) Logic(ctx *work.Context) {
-	//ctx.Layout("view/layout.html")
+	ctx.Layout("view/layout.html")
 	ctx.ServeData(work.Message{
 		"Name":  "张三",
 		"Title": "work template",
